@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const tourRoutes = require('./routes/tourRoutes');
 const userRoutes = require('./routes/userRoutes');
 const AppError = require('./utils/appError');
-const globalErrorHandler = require('./controllers/errorControllers');
+const globalErrorHandler = require('./controllers/errorController');
 
 // MidleWare
 
