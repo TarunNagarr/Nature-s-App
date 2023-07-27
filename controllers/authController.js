@@ -16,7 +16,6 @@ const signToken = id => {
 // Create Common Token
 
 const createSendToken = (user, statusCode, res) => {
-  console.log(user, statusCode, res);
   const token = signToken(user._id);
 
   res.status(statusCode).json({
@@ -97,7 +96,6 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   const currentUser = await User.findById(decoded.id);
   if (!currentUser) {
-    console.log('inside not current user');
     return next(
       new AppError(
         'The user belonging to this token does not longer exist!',
@@ -107,7 +105,6 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   // d.) Check if user change password after the token was
-  console.log(currentUser.changedPasswordAfter(decoded.iat));
   if (currentUser.changedPasswordAfter(decoded.iat)) {
     return next(
       new AppError(
@@ -214,10 +211,8 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 // User Update Password
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
-  console.log('reached herer');
   // a.) Get User from Collection
   const user = await User.findById(req.user.id).select('+password');
-  console.log(user);
 
   // b.) Check if posted current password is correct
   if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
