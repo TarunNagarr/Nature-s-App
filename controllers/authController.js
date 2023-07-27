@@ -13,7 +13,23 @@ const signToken = id => {
   });
 };
 
+// Create Common Token
+
+const createSendToken = (user, statusCode, res) => {
+  console.log(user, statusCode, res);
+  const token = signToken(user._id);
+
+  res.status(statusCode).json({
+    status: 'success',
+    token,
+    data: {
+      user: user
+    }
+  });
+};
+
 // SignUp User
+
 exports.signUp = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
@@ -24,18 +40,11 @@ exports.signUp = catchAsync(async (req, res, next) => {
     role: req.body.role
   });
 
-  const token = signToken(newUser._id);
-
-  res.status(201).json({
-    status: 'success',
-    token,
-    data: {
-      user: newUser
-    }
-  });
+  createSendToken(newUser, 201, res);
 });
 
 // Login User
+
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -62,6 +71,7 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 // Protect Routes
+
 exports.protect = catchAsync(async (req, res, next) => {
   // a.) Getting token or check if its there
 
@@ -86,8 +96,8 @@ exports.protect = catchAsync(async (req, res, next) => {
   // c.) Check if user still exist
 
   const currentUser = await User.findById(decoded.id);
-
   if (!currentUser) {
+    console.log('inside not current user');
     return next(
       new AppError(
         'The user belonging to this token does not longer exist!',
@@ -97,7 +107,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   // d.) Check if user change password after the token was
-
+  console.log(currentUser.changedPasswordAfter(decoded.iat));
   if (currentUser.changedPasswordAfter(decoded.iat)) {
     return next(
       new AppError(
@@ -114,6 +124,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 });
 
 // RestectedTo User
+
 exports.restectedTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
@@ -126,6 +137,7 @@ exports.restectedTo = (...roles) => {
 };
 
 // User Forgot Password
+
 exports.forgotPassword = catchAsync(async (req, res, next) => {
   // a.) Get user Based on Posted Email
   const user = await User.findOne({ email: req.body.email });
@@ -168,6 +180,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 });
 
 // User Reset Password
+
 exports.resetPassword = catchAsync(async (req, res, next) => {
   // Get User based on the Token!
   const hasedToken = crypto
@@ -195,9 +208,27 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
   // Log the user in, send JWT token
 
-  const token = signToken(user._id);
-  res.status(200).json({
-    status: 'success',
-    token
-  });
+  createSendToken(user, 200, res);
+});
+
+// User Update Password
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  console.log('reached herer');
+  // a.) Get User from Collection
+  const user = await User.findById(req.user.id).select('+password');
+  console.log(user);
+
+  // b.) Check if posted current password is correct
+  if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
+    return next(new AppError('Your Current Password is wrong', 401));
+  }
+
+  // c.) It so, update Password
+  user.password = req.body.password;
+  user.confirmPassword = req.body.passwordConfirm;
+  await user.save();
+
+  // d.) Log user in , send JWT
+  createSendToken(user, 200, res);
 });
