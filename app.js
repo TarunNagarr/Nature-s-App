@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -8,13 +9,26 @@ const hpp = require('hpp');
 
 const tourRoutes = require('./routes/tourRoutes');
 const userRoutes = require('./routes/userRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+// const viewRouter = require('./routes/viewRoutes');
+
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 
 const app = express();
 
-// 1) GLOBAL MIDDLEWARES
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
 
+// 1) GLOBAL MIDDLEWARES
+// Serving static files
+app.use(express.static(path.join(__dirname, '/public')));
+
+app.get('/', (req, res) => {
+  res.render('base', {
+    title: 'Search Hacker News',
+  });
+});
 // Set security HTTP headers
 app.use(helmet());
 
@@ -54,8 +68,7 @@ app.use(
   })
 );
 
-// Serving static files
-app.use(express.static(`${__dirname}/public`));
+
 
 // Test middleware
 app.use((req, res, next) => {
@@ -65,8 +78,11 @@ app.use((req, res, next) => {
 });
 
 // Routes
+// app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/reviews', reviewRoutes);
+
 
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't Find ${req.originalUrl} on this Server!`, 400));
